@@ -13,6 +13,7 @@ function Import-ModulesIfNotExists {
                     Write-Progress -Activity "`tImporting module '$ModuleName'" -Status "Please wait..." -PercentComplete $i
                     Start-Sleep -Milliseconds 100
                 }
+                break # Exit the loop after importing the module
             } else {
                 Write-Host -ForegroundColor Red  "`tModule '$ModuleName' does not exist."
             }
