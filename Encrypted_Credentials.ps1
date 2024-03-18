@@ -6,7 +6,6 @@ function ImportModules {
 
     $totalModules = $ModuleNames.Count
     $currentModule = 0
-    $importedModules = @()
 
     foreach ($ModuleName in $ModuleNames) {
         $currentModule++
@@ -23,9 +22,9 @@ function ImportModules {
             continue
         }
 
-        # Check if module is already imported or has been attempted to be imported
+        # Check if module is already imported
         $moduleImported = Get-Module -Name $ModuleName
-        if ($moduleImported -or $ModuleName -in $importedModules) {
+        if ($moduleImported) {
             Write-Host "`n$ModuleName is already imported" -ForegroundColor Green
         } else {
             Write-Host "`n$ModuleName is not imported. Trying to import..." -ForegroundColor Yellow
@@ -36,8 +35,6 @@ function ImportModules {
             } else {
                 Write-Host "Successfully imported $ModuleName" -ForegroundColor Green
             }
-            # Add the module to the list of attempted imports
-            $importedModules += $ModuleName
         }
     }
 
