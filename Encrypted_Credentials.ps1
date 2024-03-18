@@ -23,7 +23,7 @@ function Import-ModulesIfNotExists {
     }
 }
 # Import the required modules
-Import-ModulesIfNotExists -ModuleNames 'HPEOneView.850', 'Microsoft.PowerShell.Security'
+Import-ModulesIfNotExists -ModuleNames 'HPEOneView.850', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility'
 # Specify the directory where the encrypted credentials will be stored
 $directoryPath = .\Encrypted_Credentials
 # Check if the directory exists, if not, create it
