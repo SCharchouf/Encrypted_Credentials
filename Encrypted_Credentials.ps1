@@ -16,7 +16,7 @@ function ImportModules {
         Write-Host -NoNewline "`rProgress: [$progressBar] $percentComplete%"
 
         # Check if module is already imported
-        $module = Get-Module -Name $ModuleName -ListAvailable
+        $module = Get-Module -Name $ModuleName
         if ($module) {
             Write-Host "`n$ModuleName is already imported" -ForegroundColor Green
         } else {
