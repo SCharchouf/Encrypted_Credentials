@@ -1,46 +1,35 @@
-function ImportModules {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string[]]$ModuleNames
-    )
-
-    $totalModules = $ModuleNames.Count
-    $currentModule = 0
-
-    foreach ($ModuleName in $ModuleNames) {
-        $currentModule++
-
-        # Update progress bar
-        $percentComplete = ($currentModule / $totalModules) * 100
-        $progressBar = ('#' * $percentComplete) + (' ' * (100 - $percentComplete))
-        Write-Host -NoNewline "`rProgress: [$progressBar] $percentComplete%"
-
-        # Check if module is available on the system
-        $moduleAvailable = Get-Module -Name $ModuleName -ListAvailable
-        if (-not $moduleAvailable) {
-            Write-Host "`n$ModuleName is not available on the system." -ForegroundColor Red
-            continue
-        }
-
-        # Check if module is already imported
-        $moduleImported = Get-Module -Name $ModuleName
-        if ($moduleImported) {
-            Write-Host "`n$ModuleName is already imported" -ForegroundColor Green
-        } else {
-            Write-Host "`n$ModuleName is not imported. Trying to import..." -ForegroundColor Yellow
-            # Try to import the module
-            Import-Module -Name $ModuleName -ErrorAction SilentlyContinue -ErrorVariable importError
-            if ($importError) {
-                Write-Host "Failed to import $ModuleName. It may not be installed." -ForegroundColor Red
-            } else {
-                Write-Host "Successfully imported $ModuleName" -ForegroundColor Green
-            }
-        }
+foreach ($ModuleName in $modules) {
+    # Update progress bar
+    $percentComplete = ($modules.IndexOf($ModuleName) + 1) / $modules.Count * 100
+    $progressBar = ('#' * $percentComplete) + (' ' * (100 - $percentComplete))
+    Write-Host -NoNewline "`rProgress: [$progressBar] $percentComplete%"
+  
+    # Check if module is available
+    $moduleAvailable = Get-Module -Name $ModuleName -ListAvailable
+    if (-not $moduleAvailable) {
+      Write-Host "`n$ModuleName is not available on the system." -ForegroundColor Red
+      continue
     }
-
-    # Clear progress bar
-    Write-Host "`nDone checking and importing modules."
-}
+  
+    # Check if module is already imported
+    $moduleImported = Get-Module -Name $ModuleName
+    if ($moduleImported) {
+      Write-Host "`n$ModuleName is already imported" -ForegroundColor Green
+    } else {
+      Write-Host "`n$ModuleName is not imported. Trying to import..." -ForegroundColor Yellow
+      # Try to import the module
+      Import-Module -Name $ModuleName -ErrorAction SilentlyContinue -ErrorVariable importError
+      if ($importError) {
+        Write-Host "Failed to import $ModuleName. It may not be installed." -ForegroundColor Red
+      } else {
+        Write-Host "Successfully imported $ModuleName" -ForegroundColor Green
+      }
+    }
+  }
+  
+  # Clear progress bar
+  Write-Host "`nDone checking and importing modules."
+  
 
 # Import the required modules
 $modules = @('HPEOneView.850', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility')
