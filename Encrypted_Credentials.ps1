@@ -41,8 +41,10 @@ function ImportModules {
     # Clear progress bar
     Write-Host "`nDone checking and importing modules."
 }
+
 # Import the required modules
-ImportModules -ModuleNames 'HPEOneView.850', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility'
+$modules = @('HPEOneView.850', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility')
+ImportModules -ModuleNames $modules
 # Specify the directory where the encrypted credentials will be stored
 $directoryPath = .\Encrypted_Credentials
 # Check if the directory exists, if not, create it
