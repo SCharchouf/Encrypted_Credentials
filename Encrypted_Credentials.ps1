@@ -1,29 +1,41 @@
-function Import-ModulesIfNotExists {
+function ImportModules {
     param (
         [Parameter(Mandatory=$true)]
         [string[]]$ModuleNames
     )
+
+    $totalModules = $ModuleNames.Count
+    $currentModule = 0
+
     foreach ($ModuleName in $ModuleNames) {
-        if (-not (Get-Module -Name $ModuleName)) {
-            if (Get-Module -ListAvailable -Name $ModuleName) {
-                Import-Module $ModuleName
-                Write-Host -ForegroundColor Yellow "`tModule '$ModuleName' is not imported. Importing now..."
-                # Progress bar importing modules
-                for ($i = 0; $i -le 100; $i+=10) {
-                    Write-Progress -Activity "`tImporting module '$ModuleName'" -Status "Please wait..." -PercentComplete $i
-                    Start-Sleep -Milliseconds 100
-                }
-                break # Exit the loop after importing the module
-            } else {
-                Write-Host -ForegroundColor Red  "`tModule '$ModuleName' does not exist."
-            }
+        $currentModule++
+
+        # Update progress bar
+        $percentComplete = ($currentModule / $totalModules) * 100
+        $progressBar = ('#' * $percentComplete) + (' ' * (100 - $percentComplete))
+        Write-Host -NoNewline "`rProgress: [$progressBar] $percentComplete%"
+
+        # Check if module is already imported
+        $module = Get-Module -Name $ModuleName -ListAvailable
+        if ($module) {
+            Write-Host "`n$ModuleName is already imported" -ForegroundColor Green
         } else {
-            Write-Host -ForegroundColor Magenta "`tModule '$ModuleName' is already imported."
+            Write-Host "`n$ModuleName is not imported. Trying to import..." -ForegroundColor Yellow
+            try {
+                # Try to import the module
+                Import-Module -Name $ModuleName
+                Write-Host "Successfully imported $ModuleName" -ForegroundColor Green
+            } catch {
+                Write-Host "Failed to import $ModuleName. It may not be installed." -ForegroundColor Red
+            }
         }
     }
+
+    # Clear progress bar
+    Write-Host "`nDone checking and importing modules."
 }
 # Import the required modules
-Import-ModulesIfNotExists -ModuleNames 'HPEOneView.850', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility'
+ImportModules -ModuleNames 'HPEOneView.850', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility'
 # Specify the directory where the encrypted credentials will be stored
 $directoryPath = .\Encrypted_Credentials
 # Check if the directory exists, if not, create it
