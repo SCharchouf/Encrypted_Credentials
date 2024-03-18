@@ -21,12 +21,12 @@ function ImportModules {
             Write-Host "`n$ModuleName is already imported" -ForegroundColor Green
         } else {
             Write-Host "`n$ModuleName is not imported. Trying to import..." -ForegroundColor Yellow
-            try {
-                # Try to import the module
-                Import-Module -Name $ModuleName
-                Write-Host "Successfully imported $ModuleName" -ForegroundColor Green
-            } catch {
+            # Try to import the module
+            Import-Module -Name $ModuleName -ErrorAction SilentlyContinue -ErrorVariable importError
+            if ($importError) {
                 Write-Host "Failed to import $ModuleName. It may not be installed." -ForegroundColor Red
+            } else {
+                Write-Host "Successfully imported $ModuleName" -ForegroundColor Green
             }
         }
     }
