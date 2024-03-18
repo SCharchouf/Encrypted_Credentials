@@ -30,7 +30,6 @@ function ImportModules {
             }
         }
     }
-
     # Clear progress bar
     Write-Host "`nDone checking and importing modules."
 }
