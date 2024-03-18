@@ -43,57 +43,19 @@ function Import-ModulesIfNotExists {
 # Import the required modules
 $RequiredModules = @('HPEOneView.850', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility')
 Import-ModulesIfNotExists -ModuleNames $RequiredModules
-# Specify the directory where the encrypted credentials will be stored
-$directoryPath = .\Encrypted_Credentials
-# Check if the directory exists, if not, create it
-if (!(Test-Path -Path $directoryPath)) {
-    New-Item -ItemType Directory -Path $directoryPath
-    Write-Host "Directory $directoryPath created." -ForegroundColor Green
-}
-# Specify the path to the CSV file containing the list of OneView Global Dashboards
-$OGDList = Import-Csv -Path .\GlobalDashboards_List.csv
-# Define the directory to save the reports
-$UsersOGD = ".\Users_OneView_Global_Dashboard"
-$AppliancesDirectory = ".\Appliances-Details"
-# Define a function to create a directory if it doesn't exist
-function New-Directory {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string]$DirectoryPath
-    )
-
-    if (-not (Test-Path -Path $DirectoryPath)) {
-        New-Item -Path $DirectoryPath -ItemType Directory | Out-Null
-        Write-Host "Directory $DirectoryPath created." -ForegroundColor Green
+# Get the script's folder path
+$ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+# Import OneView Global Dashboard FQDNs from the CSV file placed outside the script's folder from where the script is executed
+$CsvFilePath = Join-Path -Path (Get-Item -Path $ScriptPath).Parent.FullName -ChildPath "GlobalDashboards_List.csv"
+$GlobalDashboards = Import-Csv -Path $CsvFilePath
+# Connect to the OneView Global Dashboard
+foreach ($GlobalDashboard in $GlobalDashboards) {
+    $GlobalDashboardFQDN = $GlobalDashboard.FQDN
+    $GlobalDashboardCredential = Get-Credential -Message "Enter the credentials for the OneView Global Dashboard $GlobalDashboardFQDN"
+    $GlobalDashboardSession = Connect-HPOVGlobalDashboard -FQDN $GlobalDashboardFQDN -Credential $GlobalDashboardCredential
+    if ($GlobalDashboardSession) {
+        Write-Host "Connected to the OneView Global Dashboard $GlobalDashboardFQDN" -ForegroundColor Green
     } else {
-        Write-Host "Directory $DirectoryPath already exists." -ForegroundColor Yellow
+        Write-Host "Failed to connect to the OneView Global Dashboard $GlobalDashboardFQDN" -ForegroundColor Red
     }
 }
-# Use the function to create the directories
-New-Directory -DirectoryPath $UsersOGD
-New-Directory -DirectoryPath $AppliancesDirectory
-# Connect to the OneView Global Dashboard imported from the CSV file
-foreach ($Dashboard in $OGDList) {
-    $DashboardName = $Dashboard.Name
-    $DashboardIP = $Dashboard.IP
-    $DashboardUsername = $Dashboard.Username
-    $DashboardPassword = $Dashboard.Password
-    $EncryptedPassword = ConvertTo-SecureString -String $DashboardPassword -AsPlainText -Force
-    $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $DashboardUsername, $EncryptedPassword
-    # Save the encrypted credentials to a file
-    $Credential | Export-Clixml -Path "$directoryPath\$DashboardName.xml"
-    Write-Host "Encrypted credentials for $DashboardName saved to $directoryPath\$DashboardName.xml" -ForegroundColor Green
-    # Connect to the OneView Global Dashboard
-    Connect-HPOVGlobalDashboard -Hostname $DashboardIP -Credential $Credential
-    # Get the list of users from the OneView Global Dashboard
-    $Users = Get-HPOVGlobalDashboardUser
-    # Save the list of users to a CSV file
-    $Users | Export-Csv -Path "$UsersOGD\$DashboardName.csv" -NoTypeInformation
-    Write-Host "List of users from $DashboardName saved to $UsersOGD\$DashboardName.csv" -ForegroundColor Green
-    # Get the details of the appliances from the OneView Global Dashboard
-    $Appliances = Get-HPOVGlobalDashboardAppliance
-    # Save the details of the appliances to a CSV file
-    $Appliances | Export-Csv -Path "$AppliancesDirectory\$DashboardName.csv" -NoTypeInformation
-    Write-Host "Details of the appliances from $DashboardName saved to $AppliancesDirectory\$DashboardName.csv" -ForegroundColor Green
-}
-# Disconnect from the OneView Global Dashboard
