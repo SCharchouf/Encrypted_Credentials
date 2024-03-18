@@ -6,6 +6,7 @@ function ImportModules {
 
     $totalModules = $ModuleNames.Count
     $currentModule = 0
+    $importedModules = @()
 
     foreach ($ModuleName in $ModuleNames) {
         $currentModule++
@@ -15,9 +16,16 @@ function ImportModules {
         $progressBar = ('#' * $percentComplete) + (' ' * (100 - $percentComplete))
         Write-Host -NoNewline "`rProgress: [$progressBar] $percentComplete%"
 
-        # Check if module is already imported
-        $module = Get-Module -Name $ModuleName
-        if ($module) {
+        # Check if module is available on the system
+        $moduleAvailable = Get-Module -Name $ModuleName -ListAvailable
+        if (-not $moduleAvailable) {
+            Write-Host "`n$ModuleName is not available on the system." -ForegroundColor Red
+            continue
+        }
+
+        # Check if module is already imported or has been attempted to be imported
+        $moduleImported = Get-Module -Name $ModuleName
+        if ($moduleImported -or $ModuleName -in $importedModules) {
             Write-Host "`n$ModuleName is already imported" -ForegroundColor Green
         } else {
             Write-Host "`n$ModuleName is not imported. Trying to import..." -ForegroundColor Yellow
@@ -28,8 +36,11 @@ function ImportModules {
             } else {
                 Write-Host "Successfully imported $ModuleName" -ForegroundColor Green
             }
+            # Add the module to the list of attempted imports
+            $importedModules += $ModuleName
         }
     }
+
     # Clear progress bar
     Write-Host "`nDone checking and importing modules."
 }
