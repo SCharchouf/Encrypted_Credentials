@@ -9,7 +9,7 @@ function Import-ModulesIfNotExists {
                 Import-Module $ModuleName
                 Write-Host -ForegroundColor Yellow "`tModule '$ModuleName' is not imported. Importing now..."
                 # Progress bar importing modules
-                for ($i = e; $i -le 100; $i+=10) {
+                for ($i = 0; $i -le 100; $i+=10) {
                     Write-Progress -Activity "`tImporting module '$ModuleName'" -Status "Please wait..." -PercentComplete $i
                     Start-Sleep -Milliseconds 100
                 }
