@@ -43,19 +43,31 @@ function Import-ModulesIfNotExists {
 # Import the required modules
 $RequiredModules = @('HPEOneView.850', 'GlobalDashboardPS', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility')
 Import-ModulesIfNotExists -ModuleNames $RequiredModules
-# Get the script's folder path
-$ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-# Import OneView Global Dashboard FQDNs from the CSV file placed outside the script's folder from where the script is executed
-$CsvFilePath = Join-Path -Path (Get-Item -Path $ScriptPath).Parent.FullName -ChildPath "GlobalDashboards_List.csv"
-$GlobalDashboards = Import-Csv -Path $CsvFilePath
-# Connect to the OneView Global Dashboard
-foreach ($GlobalDashboard in $GlobalDashboards) {
-    $GlobalDashboardFQDN = $GlobalDashboard.FQDN
-    $GlobalDashboardCredential = Get-Credential -Message "Enter the credentials for the OneView Global Dashboard $GlobalDashboardFQDN"
-    $GlobalDashboardSession = Connect-HPOVGlobalDashboard -FQDN $GlobalDashboardFQDN -Credential $GlobalDashboardCredential
-    if ($GlobalDashboardSession) {
-        Write-Host "Connected to the OneView Global Dashboard $GlobalDashboardFQDN" -ForegroundColor Green
-    } else {
-        Write-Host "Failed to connect to the OneView Global Dashboard $GlobalDashboardFQDN" -ForegroundColor Red
+# Define the function to connect to all OneView Global Dashboards stored in the CSV file using Connect-OVGD
+function Connect-OVGD {
+    # Get the current script's full path
+    $scriptPath = $PSScriptRoot
+
+    # Define the CSV file name
+    $csvFileName = "GlobalDashboards_List.csv"
+
+    # Combine script path and filename to get the full CSV path
+    $GlobalDashboardsCSV = Join-Path $scriptPath $csvFileName
+
+    # Import the CSV file that contains the Global Dashboards information
+    $GlobalDashboards = Import-Csv -Path $GlobalDashboardsCSV
+
+    # Connect to each OneView Global Dashboard
+    foreach ($GlobalDashboard in $GlobalDashboards) {
+        $GlobalDashboardName = $GlobalDashboard.GlobalDashboardName
+        $GlobalDashboardIP = $GlobalDashboard.GlobalDashboardIP
+        $GlobalDashboardUsername = $GlobalDashboard.GlobalDashboardUsername
+        $GlobalDashboardPassword = $GlobalDashboard.GlobalDashboardPassword
+        $GlobalDashboardSession = New-GlobalDashboardSession -GlobalDashboardIP $GlobalDashboardIP -GlobalDashboardUsername $GlobalDashboardUsername -GlobalDashboardPassword $GlobalDashboardPassword
+        if ($GlobalDashboardSession) {
+            Write-Host "`tSuccessfully connected to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Green
+        } else {
+            Write-Host "`tFailed to connect to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Red
+        }
     }
 }
