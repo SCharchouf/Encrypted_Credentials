@@ -44,59 +44,88 @@ function Import-ModulesIfNotExists {
 $RequiredModules = @('HPEOneView.850', 'GlobalDashboardPS', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility')
 Import-ModulesIfNotExists -ModuleNames $RequiredModules
 # Define the function to connect to all OneView Global Dashboards stored in the CSV file using Connect-OVGD
-function ConnectToGlobalDashboard {
-    # Get the current script's full path
-    $scriptPath = $PSScriptRoot
+function Connect-OneViewGlobalDashboard {
+    param (
+        [string]$Server,
+        [string]$Username,
+        [SecureString]$Password,
+        [switch]$IgnoreCertificateCheck
+    )
 
-    # Define the CSV file name
-    $csvFileName = "GlobalDashboards_List.csv"
+    $ErrorActionPreference = 'Stop'
+    $connectionUri = "https://$Server"
 
-    # Combine script path and filename to get the full CSV path
-    $GlobalDashboardsCSV = Join-Path $scriptPath $csvFileName
+    # Convert password to secure string
+    $securePassword = ConvertTo-SecureString $Password -AsPlainText -Force
+    $credential = New-Object System.Management.Automation.PSCredential($Username, $securePassword)
 
-    # Import the CSV file that contains the Global Dashboards information
-    $GlobalDashboards = Import-Csv -Path $GlobalDashboardsCSV
+    # Bypass certificate check if specified
+    if ($IgnoreCertificateCheck) {
+        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+    }
 
-    # Ask the user whether to ignore SSL
-    $ignoreSSL = Read-Host -Prompt "Ignore SSL errors? (yes/no)"
-
-    # Connect to each OneView Global Dashboard
-    foreach ($GlobalDashboard in $GlobalDashboards) {
-        $GlobalDashboardName = $GlobalDashboard.GlobalDashboardName
-
-        # Prompt the user for the username and password
-        $GlobalDashboardUsername = Read-Host -Prompt "Enter username for $GlobalDashboardName"
-        $GlobalDashboardPassword = Read-Host -Prompt "Enter password for $GlobalDashboardName" -AsSecureString
-
-        # Convert the secure string password to an encrypted standard string
-        $encryptedPassword = ConvertFrom-SecureString -SecureString $GlobalDashboardPassword
-
-        # Define the directory where the password files will be stored
-        $passwordDirectory = Join-Path $scriptPath "EncryptedPasswords"
-
-        # Check if the directory exists, if not, create it
-        if (!(Test-Path -Path $passwordDirectory)) {
-            New-Item -ItemType Directory -Path $passwordDirectory | Out-Null
-        }
-
-        # Define the path to the password file
-        $passwordFilePath = Join-Path $passwordDirectory "$GlobalDashboardName.txt"
-
-        # Save the encrypted password to a file
-        Set-Content -Path $passwordFilePath -Value $encryptedPassword
-
-        # Display the name of the OneView Global Dashboard you are connecting to
-        Write-Host "`tConnecting to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Yellow
-
-        # Connect to the OneView Global Dashboard
-        $GlobalDashboardSession = Connect-OVGD -Server $GlobalDashboardName -UserName $GlobalDashboardUsername -Password $GlobalDashboardPassword -Directory "local" -IgnoreSSL ($ignoreSSL -eq "yes")
-        if ($GlobalDashboardSession) {
-            Write-Host "`tSuccessfully connected to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Green
-        } else {
-            Write-Host "`tFailed to connect to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Red
+    # Attempt connection
+    try {
+        $session = Connect-OVGD -Credential $credential -Uri $connectionUri
+    }
+    catch {
+        Write-Error "Failed to connect to OneView Global Dashboard: $_"
+    }
+    finally {
+        # Reset certificate check to default behavior
+        if ($IgnoreCertificateCheck) {
+            [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
         }
     }
+
+    return $session
 }
 
-# Connect to all OneView Global Dashboards
-ConnectToGlobalDashboard
+# Get the current script's full path
+$scriptPath = $PSScriptRoot
+
+# Define the CSV file name
+$csvFileName = "GlobalDashboards_List.csv"
+
+# Combine script path and filename to get the full CSV path
+$GlobalDashboardsCSV = Join-Path $scriptPath $csvFileName
+
+# Import the CSV file that contains the Global Dashboards information
+$GlobalDashboards = Import-Csv -Path $GlobalDashboardsCSV
+
+# Ask the user whether to ignore SSL
+$ignoreSSL = Read-Host -Prompt "Ignore SSL errors? (yes/no)"
+
+# Connect to each OneView Global Dashboard
+foreach ($GlobalDashboard in $GlobalDashboards) {
+    $GlobalDashboardName = $GlobalDashboard.GlobalDashboardName
+
+    # Prompt the user for the username and password
+    $GlobalDashboardUsername = Read-Host -Prompt "Enter username for $GlobalDashboardName"
+    $GlobalDashboardPassword = Read-Host -Prompt "Enter password for $GlobalDashboardName"
+
+    # Define the directory where the password files will be stored
+    $passwordDirectory = Join-Path $scriptPath "EncryptedPasswords"
+
+    # Check if the directory exists, if not, create it
+    if (!(Test-Path -Path $passwordDirectory)) {
+        New-Item -ItemType Directory -Path $passwordDirectory | Out-Null
+    }
+
+    # Define the path to the password file
+    $passwordFilePath = Join-Path $passwordDirectory "$GlobalDashboardName.txt"
+
+    # Save the encrypted password to a file
+    Set-Content -Path $passwordFilePath -Value $GlobalDashboardPassword
+
+    # Display the name of the OneView Global Dashboard you are connecting to
+    Write-Host "`tConnecting to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Yellow
+
+    # Connect to the OneView Global Dashboard
+    $GlobalDashboardSession = Connect-OneViewGlobalDashboard -Server $GlobalDashboardName -Username $GlobalDashboardUsername -Password $GlobalDashboardPassword -IgnoreCertificateCheck ($ignoreSSL -eq "yes")
+    if ($GlobalDashboardSession) {
+        Write-Host "`tSuccessfully connected to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Green
+    } else {
+        Write-Host "`tFailed to connect to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Red
+    }
+}
