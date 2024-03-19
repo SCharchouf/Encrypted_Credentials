@@ -41,7 +41,7 @@ function Import-ModulesIfNotExists {
     Write-Host "`n`tDone checking and importing modules." -ForegroundColor Green
 }
 # Import the required modules
-$RequiredModules = @('HPEOneView.850', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility')
+$RequiredModules = @('HPEOneView.850', 'GlobalDashboardPS', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility')
 Import-ModulesIfNotExists -ModuleNames $RequiredModules
 # Get the script's folder path
 $ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
