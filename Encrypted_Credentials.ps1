@@ -44,30 +44,43 @@ function Import-ModulesIfNotExists {
 $RequiredModules = @('HPEOneView.850', 'GlobalDashboardPS', 'Microsoft.PowerShell.Security', 'Microsoft.PowerShell.Utility')
 Import-ModulesIfNotExists -ModuleNames $RequiredModules
 # Define the function to connect to all OneView Global Dashboards stored in the CSV file using Connect-OVGD
-function Connect-OVGD {
+function ConnectToGlobalDashboard {
     # Get the current script's full path
     $scriptPath = $PSScriptRoot
-
     # Define the CSV file name
     $csvFileName = "GlobalDashboards_List.csv"
-
     # Combine script path and filename to get the full CSV path
     $GlobalDashboardsCSV = Join-Path $scriptPath $csvFileName
-
     # Import the CSV file that contains the Global Dashboards information
     $GlobalDashboards = Import-Csv -Path $GlobalDashboardsCSV
-
     # Connect to each OneView Global Dashboard
     foreach ($GlobalDashboard in $GlobalDashboards) {
         $GlobalDashboardName = $GlobalDashboard.GlobalDashboardName
-        $GlobalDashboardIP = $GlobalDashboard.GlobalDashboardIP
-        $GlobalDashboardUsername = $GlobalDashboard.GlobalDashboardUsername
-        $GlobalDashboardPassword = $GlobalDashboard.GlobalDashboardPassword
-        $GlobalDashboardSession = New-GlobalDashboardSession -GlobalDashboardIP $GlobalDashboardIP -GlobalDashboardUsername $GlobalDashboardUsername -GlobalDashboardPassword $GlobalDashboardPassword
-        if ($GlobalDashboardSession) {
-            Write-Host "`tSuccessfully connected to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Green
-        } else {
-            Write-Host "`tFailed to connect to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Red
-        }
+        # Prompt the user for the username and password
+        $GlobalDashboardUsername = Read-Host -Prompt "Enter username for $GlobalDashboardName"
+        $GlobalDashboardPassword = Read-Host -Prompt "Enter password for $GlobalDashboardName" -AsSecureString
+        # Convert the secure string password to an encrypted standard string
+        $encryptedPassword = ConvertFrom-SecureString -SecureString $GlobalDashboardPassword
+        # Define the directory where the password files will be stored
+        $passwordDirectory = Join-Path $scriptPath "EncryptedPasswords"
+        # Check if the directory exists, if not, create it
+            if (!(Test-Path -Path $passwordDirectory)) {
+                New-Item -ItemType Directory -Path $passwordDirectory | Out-Null
+            }
+        # Define the path to the password file
+        $passwordFilePath = Join-Path $passwordDirectory "$GlobalDashboardName.txt"
+        # Save the encrypted password to a file
+        Set-Content -Path $passwordFilePath -Value $encryptedPassword
+        # Create a PSCredential object to use with the New-GlobalDashboardSession function
+        $GlobalDashboardCredential = New-Object System.Management.Automation.PSCredential($GlobalDashboardUsername, $GlobalDashboardPassword)
+        # Connect to the OneView Global Dashboard
+        $GlobalDashboardSession = New-GlobalDashboardSession -GlobalDashboardIP $GlobalDashboardName -Credential $GlobalDashboardCredential
+            if ($GlobalDashboardSession) {
+                Write-Host "`tSuccessfully connected to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Green
+            } else {
+                Write-Host "`tFailed to connect to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Red
+            }
     }
 }
+# Connect to all OneView Global Dashboards
+ConnectToGlobalDashboard
