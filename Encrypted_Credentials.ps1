@@ -57,6 +57,9 @@ function ConnectToGlobalDashboard {
     # Import the CSV file that contains the Global Dashboards information
     $GlobalDashboards = Import-Csv -Path $GlobalDashboardsCSV
 
+    # Ask the user whether to ignore SSL
+    $ignoreSSL = Read-Host -Prompt "Ignore SSL errors? (yes/no)"
+
     # Connect to each OneView Global Dashboard
     foreach ($GlobalDashboard in $GlobalDashboards) {
         $GlobalDashboardName = $GlobalDashboard.GlobalDashboardName
@@ -82,14 +85,11 @@ function ConnectToGlobalDashboard {
         # Save the encrypted password to a file
         Set-Content -Path $passwordFilePath -Value $encryptedPassword
 
-        # Create a PSCredential object to use with the Connect-OVGD function
-        $GlobalDashboardCredential = New-Object System.Management.Automation.PSCredential($GlobalDashboardUsername, $GlobalDashboardPassword)
-
         # Display the name of the OneView Global Dashboard you are connecting to
         Write-Host "`tConnecting to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Yellow
 
         # Connect to the OneView Global Dashboard
-        $GlobalDashboardSession = Connect-OVGD -Server $GlobalDashboardName -UserName $GlobalDashboardUsername -Password $GlobalDashboardPassword
+        $GlobalDashboardSession = Connect-OVGD -Server $GlobalDashboardName -UserName $GlobalDashboardUsername -Password $GlobalDashboardPassword -Directory "local" -IgnoreSSL ($ignoreSSL -eq "yes")
         if ($GlobalDashboardSession) {
             Write-Host "`tSuccessfully connected to the OneView Global Dashboard: $GlobalDashboardName" -ForegroundColor Green
         } else {
